@@ -1,0 +1,64 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "ManagementAccountNumber": {
+            "Description": "The account which has the ability to assume role into member accounts. This is the account that you specify in your environmental values or ~/.aws/config",
+            "Type": "Number"
+        },
+        "CrossAccountRoleName": {
+            "Description": "Your Role Name (ex: CrossAccountRoleForAWSNetworkQueryTool); This will need to be the same across all of the member accounts",
+            "Type": "String",
+            "Default": "CrossAccountRoleForAWSNetworkQueryTool",
+        }
+    },
+    "Resources": {
+        "CrossAccountRoleForAWSNetworkQueryTool": {
+            "Type": "AWS::IAM::Role",
+            "Metadata": {
+                "cfn_nag": {
+                    "rules_to_suppress": [
+                        {
+                            "id": "W28",
+                            "reason": "The role name needs to be same in all of the member accounts."
+                        }
+                    ]
+                }
+            },
+            "Properties": {
+                "RoleName": {
+                    "Ref": "CrossAccountRoleName"
+                },
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:iam::",
+                                            {
+                                                "Ref": "ManagementAccountNumber"
+                                            },
+                                            ":root"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess",
+                    "arn:aws:iam::aws:policy/AmazonVPCReadOnlyAccess"
+                ],
+                "Path": "/"
+            }
+        }
+    }
+}
