@@ -19,7 +19,9 @@ If you would like to see other Networking related information, please submit a f
 
   1. [Prerequisites](#prerequisites)
   1. [Getting Started](#getting-started)
-  1. [Architecture and Process Overview](#process-overview)
+  1. [Examples](#examples)
+  1. [Process Overview](#process-overview)
+  1. [Contributing](#contributing)
   1. [License](#license)
 
 
@@ -106,7 +108,7 @@ This section is applicable for customers who do not have a cross-account role th
 You can view the status of the stack in the AWS CloudFormation Console in the **Status** column. You should see a status of `CREATE_COMPLETE` when the role has been created.
 
 
-### Examples
+## Examples
 1. Make sure your environmental variables are set or `~/.aws/config` is configured for your AWS Org Management account (previously known as Master account). [More Information.](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html)
 1. Make sure the Cross-Account IAM role has been created in AWS Member Accounts. [More Information.](#deploy-a-cross-account-iam-role-in-aws-member-accounts)
 
@@ -191,10 +193,10 @@ A total of 60 Network Interfaces were found. Writing details to specific_account
 1. Install the script by running `python3 setup.py install` in the script directory
 1. Start the script by running `aws_network_query`
 1. Assumes role in Primary account to list all accounts `organizations:ListAccounts`
- * The script can also use AccountIds from a CSV file. This is useful if you cannot perform `organizations:ListAccounts`
+   * The script can also use AccountIds from a CSV file. This is useful if you cannot perform `organizations:ListAccounts`
 1. Assumes Cross-Account role to each member account to list regions and then performs the requested API calls
 1. Returns results and appends a CSV file with the information received
- * CSV file will be stored locally in the same directory that you running the script from
+   * CSV file will be stored locally in the same directory that you running the script from
 
 ## Contributing
 
