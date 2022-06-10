@@ -164,6 +164,78 @@ def process_internet_gateway(account, region, ec2):
     return result
 
 
+def process_transit_gateway(account, region, ec2):
+    """
+    describes one or more of your transit gateways
+    :param account:
+    :param region:
+    :param ec2 (child session):
+    :return list of transit gateway routes:
+    """
+    tgwrtlist = []
+    result = []
+    tgwrtresponse = ec2.describe_transit_gateway_route_tables()
+    for item in tgwrtresponse['TransitGatewayRouteTables']:
+        tgwrtlist.append(item)
+    while 'NextToken' in tgwrtresponse:
+        tgwrtresponse = ec2.describe_transit_gateway_route_tables(NextToken=tgwrtresponse['NextToken'])
+        for item in tgwrtresponse['TransitGatewayRouteTables']:
+            tgwrtlist.append(item)
+
+    for item in tgwrtlist:
+        # find route table routes
+        dict = {'AccountId': account, 'Region': region, 'TGW-ID': item['TransitGatewayId'], 'TGW-RouteTableID': item['TransitGatewayRouteTableId']}
+        print(f'Account {account}: New Transit Gateway Route Table found {dict}')
+
+        rtRoutesList = []
+        rtRoutesResponse = ec2.search_transit_gateway_routes(
+            TransitGatewayRouteTableId=item['TransitGatewayRouteTableId'],
+            Filters=[
+                {
+                    'Name': 'state',
+                    'Values': [
+                        'active',
+                    ]
+                },
+            ]
+        )
+        for item2 in rtRoutesResponse['Routes']:
+            rtRoutesList.append(item2)
+        while 'NextToken' in rtRoutesResponse:
+            rtRoutesResponse = ec2.search_transit_gateway_routes(NextToken=rtRoutesResponse['NextToken'])
+            for item2 in rtRoutesResponse['Routes']:
+                rtRoutesList.append(item2)
+            
+        for item2 in rtRoutesList:
+            attachResID = []
+            attachType = []
+            for ResourceId in item2['TransitGatewayAttachments']:
+                attachResID.append(ResourceId['ResourceId'])
+            attachResID_string = ",".join(attachResID)
+
+            for ResourceType in item2['TransitGatewayAttachments']:
+                attachType.append(ResourceType['ResourceType'])
+            attachType_string = ",".join(attachType)
+
+            item2['AccountId'] = account
+            item2['Region'] = region
+            item2['Attach-ResourceID'] = attachResID_string
+            item2['QueryType'] = 'tgw'
+            #item['DestinationCidrBlock'] = item2['DestinationCidrBlock']
+            #item['RouteType'] =  item2['Type']
+            item2['Attach-ResourceType'] = attachType_string
+            item2['TGW-RouteTableId'] = item['TransitGatewayRouteTableId']
+            item2['Tags'] = item['Tags']
+            item2['TGW-Id'] = item['TransitGatewayId']
+
+            debug3 = {'destCIDR-item2': item2['DestinationCidrBlock'] }
+            print(f'Debug3 {debug3}')
+
+            result.append(item2)
+
+    return result
+
+
 def process_nat_gateway(account, region, ec2):
     """
     describes one or more of your NAT gateways
@@ -256,6 +328,67 @@ def process_vpc_cidr(account, region, ec2):
 
     return result
 
+
+def process_vpc_peer(account, region, ec2):
+    """
+    describes one or more of your VPC peers
+    :param account:
+    :param region:
+    :param ec2 (child session):
+    :return list of VPC Peers:
+    """
+    list = []
+    result = []
+    response = ec2.describe_vpc_peering_connections()
+    for item in response['VpcPeeringConnections']:
+        list.append(item)
+    while 'NextToken' in response:
+        response = ec2.describe_vpc_peering_connections(NextToken=response['NextToken'])
+        for item in response['VpcPeeringConnectionsclear']:
+            list.append(item)
+
+    for item in list:
+        dict = {'AccountId': account, 'PeeringID': item['VpcPeeringConnectionId'], 'Region': region}
+        print(f'Account {account}: New VPC Peer found {dict}')
+
+        item['AccountId'] = account
+        item['Region'] = region
+        item['QueryType'] = 'peer'
+
+        result.append(item)
+
+    return result
+
+def process_vpn_connections(account, region, ec2):
+    """
+    describes one or more of your VPN Connectionss
+    :param account:
+    :param region:
+    :param ec2 (child session):
+    :return list of VPNs:
+    """
+    list = []
+    result = []
+    response = ec2.describe_vpn_connections()
+    for item in response['VpnConnections']:
+        list.append(item)
+    while 'NextToken' in response:
+        response = ec2.describe_vpn_connections(NextToken=response['NextToken'])
+        for item in response['VpnConnections']:
+            list.append(item)
+
+    for item in list:
+        dict = {'AccountId': account, 'VPNID': item['VpnConnectionId'], 'Region': region}
+        print(f'Account {account}: New VPN Connection found {dict}')
+
+        item['AccountId'] = account
+        item['Region'] = region
+        item['QueryType'] = 'vpn'
+        item['CustomerGatewayConfiguration'] = 'check-aws-console'
+
+        result.append(item)
+
+    return result
 
 def process_vpc_subnets(account, region, ec2):
     """
@@ -380,6 +513,21 @@ def worker(account, session, args):
                     for item in igw_results:
                         results.append(item)
 
+                if args.transit_gateway or args.all_reports:
+                    tgw_results = process_transit_gateway(account, region, ec2)
+                    for item in tgw_results:
+                        results.append(item)
+
+                if args.vpc_peer or args.all_reports:
+                    peer_results = process_vpc_peer(account, region, ec2)
+                    for item in peer_results:
+                        results.append(item)
+
+                if args.vpn_connections or args.all_reports:
+                    vpn_results = process_vpn_connections(account, region, ec2)
+                    for item in vpn_results:
+                        results.append(item)
+
                 if args.nat_gateway or args.all_reports:
                     natgw_results = process_nat_gateway(account, region, ec2)
                     for item in natgw_results:
@@ -465,6 +613,9 @@ def main():
     parser.add_argument("-subnets", "--vpc-subnets", type=str2bool, nargs='?', const=True, default=False, help="Activate VPC Subnet Report")
     parser.add_argument("-eip", "--addresses", type=str2bool, nargs='?', const=True, default=False, help="Activate EIP Report")
     parser.add_argument("-eni", "--network-interfaces", type=str2bool, nargs='?', const=True, default=False, help="Activate ENI Report")
+    parser.add_argument("-tgw", "--transit-gateway", type=str2bool, nargs='?', const=True, default=False, help="Activate TGW Report")
+    parser.add_argument("-peer", "--vpc-peer", type=str2bool, nargs='?', const=True, default=False, help="Activate VPC Peering Report")
+    parser.add_argument("-vpn", "--vpn-connections", type=str2bool, nargs='?', const=True, default=False, help="Activate VPN Report")
     parser.add_argument("-all", "--all-reports", type=str2bool, nargs='?', const=True, default=False, help="Activate all supported reports")
     args = parser.parse_args()
 
@@ -478,11 +629,17 @@ def main():
     final_result_subnets = []
     final_result_addresses = []
     final_result_eni = []
+    final_result_tgw = []
+    final_result_peer = []
+    final_result_vpn = []
     final_result_notprocessed = []
 
     if not args.internet_gateway and not args.nat_gateway \
             and not args.load_balancer and not args.vpc_cidr \
             and not args.vpc_subnets and not args.addresses \
+            and not args.transit_gateway \
+            and not args.vpn_connections \
+            and not args.vpc_peer \
             and not args.network_interfaces and not args.all_reports:
         print("No scans selected. Nothing to do here. Try adding the --help option")
         exit()
@@ -510,6 +667,12 @@ def main():
             try:
                 if item['QueryType'] == 'igw':
                     final_result_igw.append(item)
+                if item['QueryType'] == 'tgw':
+                    final_result_tgw.append(item)
+                if item['QueryType'] == 'peer':
+                    final_result_peer.append(item)
+                if item['QueryType'] == 'vpn':
+                    final_result_vpn.append(item)
                 if item['QueryType'] == 'natgw':
                     final_result_natgw.append(item)
                 if item['QueryType'] == 'elb':
@@ -539,6 +702,21 @@ def main():
         output_filename_igw = args.output_filename + "-igw"
         print(f'A total of {len(final_result_igw)} Internet Gateways were found. Writing details to {output_filename_igw}.csv')
         write_csv(final_result_igw, output_filename_igw)
+
+    if args.transit_gateway or args.all_reports:
+        output_filename_tgw = args.output_filename + "-tgw"
+        print(f'A total of {len(final_result_tgw)} Transit Gateway routes were found. Writing details to {output_filename_tgw}.csv')
+        write_csv(final_result_tgw, output_filename_tgw)
+
+    if args.vpn_connections or args.all_reports:
+        output_filename_vpn = args.output_filename + "-vpn"
+        print(f'A total of {len(final_result_vpn)} VPNs were found. Writing details to {output_filename_vpn}.csv')
+        write_csv(final_result_vpn, output_filename_vpn)
+
+    if args.vpc_peer or args.all_reports:
+        output_filename_peer = args.output_filename + "-peer"
+        print(f'A total of {len(final_result_peer)} VPC Peers were found. Writing details to {output_filename_peer}.csv')
+        write_csv(final_result_peer, output_filename_peer)
 
     if args.nat_gateway or args.all_reports:
         output_filename_natgw = args.output_filename + "-natgw"
