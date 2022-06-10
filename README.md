@@ -12,6 +12,9 @@ The following queries are supported:
 - VPC Subnets
 - Public Elastic IPs (EIP)
 - Elastic Network Interfaces (ENI)
+- Transit Gateway (TGW)
+- VPC Peers
+- VPN Connections
 
 If you would like to see other Networking related information, please submit a feature request.
 
