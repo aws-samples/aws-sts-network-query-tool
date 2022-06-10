@@ -41,10 +41,14 @@ Run `python3 setup.py install` in the script directory to install. You can then 
 
 ```
 shell$ aws_network_query --help
-usage: aws_network_query [-h] [-r CROSS_ACCOUNT_ROLE_NAME] [-o OUTPUT_FILENAME] [-i ACCOUNTS_CSV]
-                         [-igw [INTERNET_GATEWAY]] [-natgw [NAT_GATEWAY]] [-elb [LOAD_BALANCER]]
-                         [-cidr [VPC_CIDR]] [-subnets [VPC_SUBNETS]] [-eip [ADDRESSES]]
-                         [-eni [NETWORK_INTERFACES]] [-all [ALL_REPORTS]]
+usage: aws_network_query [-h] [-r CROSS_ACCOUNT_ROLE_NAME]
+                         [-o OUTPUT_FILENAME] [-i ACCOUNTS_CSV]
+                         [-igw [INTERNET_GATEWAY]] [-natgw [NAT_GATEWAY]]
+                         [-elb [LOAD_BALANCER]] [-cidr [VPC_CIDR]]
+                         [-subnets [VPC_SUBNETS]] [-eip [ADDRESSES]]
+                         [-eni [NETWORK_INTERFACES]] [-tgw [TRANSIT_GATEWAY]]
+                         [-peer [VPC_PEER]] [-vpn [VPN_CONNECTIONS]]
+                         [-all [ALL_REPORTS]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -70,6 +74,12 @@ optional arguments:
                         Activate EIP Report
   -eni [NETWORK_INTERFACES], --network-interfaces [NETWORK_INTERFACES]
                         Activate ENI Report
+  -tgw [TRANSIT_GATEWAY], --transit-gateway [TRANSIT_GATEWAY]
+                        Activate TGW Report
+  -peer [VPC_PEER], --vpc-peer [VPC_PEER]
+                        Activate VPC Peering Report
+  -vpn [VPN_CONNECTIONS], --vpn-connections [VPN_CONNECTIONS]
+                        Activate VPN Report
   -all [ALL_REPORTS], --all-reports [ALL_REPORTS]
                         Activate all supported reports
 ```
