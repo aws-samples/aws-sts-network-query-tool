@@ -5,6 +5,8 @@
 AWS STS Network Query Tool uses cross account roles to collect networking related information for multiple accounts and outputs a CSV. Users will need to ensure the proper cross account roles are created for each account, details below.
 
 The following queries are supported:
+- VPC Peering Connections (VPCPEER)
+- Transit Gateway (TGW)
 - Internet Gateway (IGW)
 - NAT Gateway (NATGW)
 - Load Balancer (NLB/ALB)
@@ -38,21 +40,29 @@ Run `python3 setup.py install` in the script directory to install. You can then 
 
 ```
 shell$ aws_network_query --help
-usage: aws_network_query [-h] [-r CROSS_ACCOUNT_ROLE_NAME] [-o OUTPUT_FILENAME] [-i ACCOUNTS_CSV]
-                         [-igw [INTERNET_GATEWAY]] [-natgw [NAT_GATEWAY]] [-elb [LOAD_BALANCER]]
-                         [-cidr [VPC_CIDR]] [-subnets [VPC_SUBNETS]] [-eip [ADDRESSES]]
+usage: aws_network_query [-h] [-r CROSS_ACCOUNT_ROLE_NAME]
+                         [-o OUTPUT_FILENAME] [-i ACCOUNTS_CSV]
+                         [-vpcpeer [VPC_PEER_CONNS]] [-tgw [TRANSIT_GATEWAY]]
+                         [-igw [INTERNET_GATEWAY]] [-natgw [NAT_GATEWAY]]
+                         [-elb [LOAD_BALANCER]] [-cidr [VPC_CIDR]]
+                         [-subnets [VPC_SUBNETS]] [-eip [ADDRESSES]]
                          [-eni [NETWORK_INTERFACES]] [-all [ALL_REPORTS]]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -r CROSS_ACCOUNT_ROLE_NAME, --cross-account-role-name CROSS_ACCOUNT_ROLE_NAME
-                        Enter the CrossAccountRoleName that you used in the cross-account-member-role
-                        CloudFormation template. Default: CrossAccountRoleForAWSNetworkQueryTool
+                        Enter the CrossAccountRoleName that you used in the
+                        cross-account-member-role CloudFormation template.
+                        Default: CrossAccountRoleForAWSNetworkQueryTool
   -o OUTPUT_FILENAME, --output-filename OUTPUT_FILENAME
                         Choose a filename for the output. Default: output.csv
   -i ACCOUNTS_CSV, --accounts-csv ACCOUNTS_CSV
-                        Choose a CSV containing AccountIds. Default: Account IDs will be pulled from AWS
-                        Organizations
+                        Choose a CSV containing AccountIds. Default: Account
+                        IDs will be pulled from AWS Organizations
+  -vpcpeer [VPC_PEER_CONNS], --vpc-peer-conns [VPC_PEER_CONNS]
+                        Activate VPC Peer Conns Report
+  -tgw [TRANSIT_GATEWAY], --transit-gateway [TRANSIT_GATEWAY]
+                        Activate TGW Report
   -igw [INTERNET_GATEWAY], --internet-gateway [INTERNET_GATEWAY]
                         Activate IGW Report
   -natgw [NAT_GATEWAY], --nat-gateway [NAT_GATEWAY]
@@ -69,6 +79,7 @@ optional arguments:
                         Activate ENI Report
   -all [ALL_REPORTS], --all-reports [ALL_REPORTS]
                         Activate all supported reports
+
 ```
 
 > Note: This application uses threading to speed up the process of querying the regions of each account.  Users will notice a momentary spike in local machine resources as the threads and sessions are created and the APIs invoked.

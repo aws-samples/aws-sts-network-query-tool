@@ -72,7 +72,7 @@ def get_org_accounts(session):
     :return account_ids:
     """
     org_client = session.client('organizations')
-    account_ids = []
+    account_ids_names = []
     try:
         response = org_client.list_accounts()
     except botocore.exceptions.ClientError as e:
@@ -81,12 +81,12 @@ def get_org_accounts(session):
 
     try:
         for account in response['Accounts']:
-            account_ids.append(account['Id'])
+            account_ids_names.append({'Id': account['Id'], 'Name': account['Name']})
         while 'NextToken' in response:
             response = org_client.list_accounts(NextToken=response['NextToken'])
             for account in response['Accounts']:
-                account_ids.append(account['Id'])
-        return account_ids
+                account_ids_names.append({'Id': account['Id'], 'Name': account['Name']})
+        return account_ids_names
     except NameError:
         return None
 
@@ -125,6 +125,66 @@ def list_accounts_from_file(file_name):
             x = x + 1
     return accounts
 
+def process_vpc_peer_conns(account, region, ec2):
+    """
+    describes one or more of your vpc peering connections
+    :param account:
+    :param region:
+    :param ec2 (child session):
+    :return list of vpc peering connections:
+    """
+    list = []
+    result = []
+    response = ec2.describe_vpc_peering_connections()
+    for item in response['VpcPeeringConnections']:
+      list.append(item)
+    while 'NextToken' in response:
+      response = ec2.describe_vpc_peering_connections(NextToken=response['NextToken'])
+      for item in response['VpcPeeringConnections']:
+        list.append(item)
+
+    for item in list:
+      dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'VpcPeeringConnectionId': item['VpcPeeringConnectionId'], 'Region': region}
+      print(f"Account {account['Id']} - {account['Name']}: New VPC Peering Connection found {dict}")
+
+      item['AccountId'] = account['Id']
+      item['AccountName'] = account['Name']
+      item['Region'] = region
+      item['QueryType'] = 'vpcpeer'
+
+      result.append(item)
+    return result
+
+def process_transit_gateway(account, region, ec2):
+    """
+    describes one or more of your transit gateways
+    :param account:
+    :param region:
+    :param ec2 (child session):
+    :return list of transit gateways:
+    """
+    list = []
+    result = []
+    response = ec2.describe_transit_gateways()
+    for item in response['TransitGateways']:
+      list.append(item)
+    while 'NextToken' in response:
+      response = ec2.describe_transit_gateways(NextToken=response['NextToken'])
+      for item in response['TransitGateways']:
+        list.append(item)
+
+    for item in list:
+      dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'TransitGatewayId': item['TransitGatewayId'], 'Region': region}
+      print(f"Account {account['Id']} - {account['Name']}: New Transit Gateway found {dict}")
+
+      item['AccountId'] = account['Id']
+      item['AccountName'] = account['Name']
+      item['Region'] = region
+      item['QueryType'] = 'tgw'
+
+      result.append(item)
+    return result
+
 
 def process_internet_gateway(account, region, ec2):
     """
@@ -151,10 +211,11 @@ def process_internet_gateway(account, region, ec2):
             vpcs.append(VpcId['VpcId'])
         vpc_string = ",".join(vpcs)
 
-        dict = {'AccountId': account, 'InternetGatewayId': item['InternetGatewayId'], 'VpcIds': vpc_string, 'Region': region}
-        print(f'Account {account}: New Internet Gateway found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'InternetGatewayId': item['InternetGatewayId'], 'VpcIds': vpc_string, 'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New Internet Gateway found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['VpcIds'] = vpc_string
         item['QueryType'] = 'igw'
@@ -183,10 +244,11 @@ def process_nat_gateway(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'NatGatewayId': item['NatGatewayId'], 'VpcId': item['VpcId'], 'SubnetId': item['SubnetId'],'Region': region}
-        print(f'Account {account}: New NAT Gateway found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'NatGatewayId': item['NatGatewayId'], 'VpcId': item['VpcId'], 'SubnetId': item['SubnetId'],'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New NAT Gateway found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['QueryType'] = 'natgw'
 
@@ -214,10 +276,11 @@ def process_load_balancer(account, region, elb):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'LoadBalancerArn': item['LoadBalancerArn'], 'DNSName': item['DNSName'], 'VpcId': item['VpcId'],'Region': region}
-        print(f'Account {account}: New Load Balancer found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'LoadBalancerArn': item['LoadBalancerArn'], 'DNSName': item['DNSName'], 'VpcId': item['VpcId'],'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New Load Balancer found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['QueryType'] = 'elb'
 
@@ -245,10 +308,11 @@ def process_vpc_cidr(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
-        print(f'Account {account}: New VPC CIDR found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New VPC CIDR found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['QueryType'] = 'cidr'
 
@@ -276,10 +340,11 @@ def process_vpc_subnets(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'SubnetId': item['SubnetId'], 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
-        print(f'Account {account}: New VPC subnet found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'SubnetId': item['SubnetId'], 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New VPC subnet found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['QueryType'] = 'subnets'
 
@@ -307,10 +372,11 @@ def process_addresses(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'PublicIp': item['PublicIp'], 'Region': region}
-        print(f'Account {account}: New Elastic IP found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'PublicIp': item['PublicIp'], 'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New Elastic IP found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['QueryType'] = 'addresses'
 
@@ -338,10 +404,11 @@ def process_network_interfaces(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'NetworkInterfaceId': item['NetworkInterfaceId'], 'PrivateIpAddress': item['PrivateIpAddress'], 'Status': item['Status'], 'SubnetId': item['SubnetId'], 'Region': region}
-        print(f'Account {account}: New Network Interfaces found {dict}')
+        dict = {'AccountId': account['Id'], 'AccountName': account['Name'], 'NetworkInterfaceId': item['NetworkInterfaceId'], 'PrivateIpAddress': item['PrivateIpAddress'], 'Status': item['Status'], 'SubnetId': item['SubnetId'], 'Region': region}
+        print(f"Account {account['Id']} - {account['Name']}: New Network Interfaces found {dict}")
 
-        item['AccountId'] = account
+        item['AccountId'] = account['Id']
+        item['AccountName'] = account['Name']
         item['Region'] = region
         item['QueryType'] = 'eni'
 
@@ -364,16 +431,26 @@ def worker(account, session, args):
     cannotprocess = []
 
     try:
-        print(f"Processing Account: {account}")
+        print(f"Processing Account: {account['Id']} - {account['Name']}")
 
         role_name = os.environ.get('RoleName', args.cross_account_role_name)
-        child_session = get_child_session(account_id=account, role_name=role_name, session=session)
+        child_session = get_child_session(account_id=account['Id'], role_name=role_name, session=session)
         if child_session != 'FAILED':
-            print(f'Account {account}: AssumeRole success, querying VPC information')
+            print(f"Account {account['Id']} - {account['Name']}: AssumeRole success, querying VPC information")
             ec2 = child_session.client('ec2')
             region_list = [region['RegionName'] for region in ec2.describe_regions()['Regions']]
             for region in region_list:
                 ec2 = child_session.client('ec2', region_name=region)
+
+                if args.vpc_peer_conns or args.all_reports:
+                    vpcpeer_results = process_vpc_peer_conns(account, region, ec2)
+                    for item in vpcpeer_results:
+                        results.append(item)
+
+                if args.transit_gateway or args.all_reports:
+                    tgw_results = process_transit_gateway(account, region, ec2)
+                    for item in tgw_results:
+                        results.append(item)
 
                 if args.internet_gateway or args.all_reports:
                     igw_results = process_internet_gateway(account, region, ec2)
@@ -412,13 +489,13 @@ def worker(account, session, args):
                         results.append(item)
 
         else:
-            cannotprocess.append(account)
+            cannotprocess.append(account['Id'])
 
     except botocore.exceptions.ClientError as e:
-        print(f'Account {account}: {e}')
+        print(f"Account {account['Id']}: {e}")
         pass
     except Exception as e:
-        print(f'Account {account}: {e}')
+        print(f"Account {account['Id']}: {e}")
         raise e
 
     return results,cannotprocess
@@ -458,6 +535,8 @@ def main():
     parser.add_argument("-r", "--cross-account-role-name", default="CrossAccountRoleForAWSNetworkQueryTool", help="Enter the CrossAccountRoleName that you used in the cross-account-member-role CloudFormation template. Default: CrossAccountRoleForAWSNetworkQueryTool")
     parser.add_argument("-o", "--output-filename", default="output", help="Choose a filename for the output. Default: output.csv")
     parser.add_argument("-i", "--accounts-csv", default=False, help="Choose a CSV containing AccountIds. Default: Account IDs will be pulled from AWS Organizations")
+    parser.add_argument("-vpcpeer", "--vpc-peer-conns", type=str2bool, nargs='?', const=True, default=False, help="Activate VPC Peer Conns Report")
+    parser.add_argument("-tgw", "--transit-gateway", type=str2bool, nargs='?', const=True, default=False, help="Activate TGW Report")
     parser.add_argument("-igw", "--internet-gateway", type=str2bool, nargs='?', const=True, default=False, help="Activate IGW Report")
     parser.add_argument("-natgw", "--nat-gateway", type=str2bool, nargs='?', const=True, default=False, help="Activate NATGW Report")
     parser.add_argument("-elb", "--load-balancer", type=str2bool, nargs='?', const=True, default=False, help="Activate ELB Report")
@@ -471,6 +550,8 @@ def main():
     threads = []
     threads_final_result = []
     threads_not_processed = []
+    final_result_vpcpeer = []
+    final_result_tgw = []
     final_result_igw = []
     final_result_natgw = []
     final_result_elb = []
@@ -480,7 +561,8 @@ def main():
     final_result_eni = []
     final_result_notprocessed = []
 
-    if not args.internet_gateway and not args.nat_gateway \
+    if not args.vpc_peer_conns and not args.transit_gateway \
+            and not args.internet_gateway and not args.nat_gateway \
             and not args.load_balancer and not args.vpc_cidr \
             and not args.vpc_subnets and not args.addresses \
             and not args.network_interfaces and not args.all_reports:
@@ -508,6 +590,10 @@ def main():
     for thread_result in threads_final_result:
         for item in thread_result:
             try:
+                if item['QueryType'] == 'vpcpeer':
+                    final_result_vpcpeer.append(item)
+                if item['QueryType'] == 'tgw':
+                    final_result_tgw.append(item)
                 if item['QueryType'] == 'igw':
                     final_result_igw.append(item)
                 if item['QueryType'] == 'natgw':
@@ -534,6 +620,16 @@ def main():
 
     print("================================")
     print("FINISHED. Results summary:")
+
+    if args.vpc_peer_conns or args.all_reports:
+        output_filename_vpcpeer = args.output_filename + "-vpcpeer"
+        print(f'A total of {len(final_result_vpcpeer)} VPC Peering Connections were found. Writing details to {output_filename_vpcpeer}.csv')
+        write_csv(final_result_vpcpeer, output_filename_vpcpeer)
+
+    if args.transit_gateway or args.all_reports:
+        output_filename_tgw = args.output_filename + "-tgw"
+        print(f'A total of {len(final_result_tgw)} Transit Gateways were found. Writing details to {output_filename_tgw}.csv')
+        write_csv(final_result_tgw, output_filename_tgw)
 
     if args.internet_gateway or args.all_reports:
         output_filename_igw = args.output_filename + "-igw"
