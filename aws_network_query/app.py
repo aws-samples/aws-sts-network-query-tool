@@ -10,6 +10,8 @@ import botocore
 import argparse
 import uuid
 
+account_name = {}
+
 def str2bool(input):
     """
     validate that a boolean value has been entered
@@ -82,10 +84,12 @@ def get_org_accounts(session):
     try:
         for account in response['Accounts']:
             account_ids.append(account['Id'])
+            account_name[account['Id']] = account['Name']
         while 'NextToken' in response:
             response = org_client.list_accounts(NextToken=response['NextToken'])
             for account in response['Accounts']:
                 account_ids.append(account['Id'])
+                account_name[account['Id']] = account['Name']
         return account_ids
     except NameError:
         return None
@@ -151,10 +155,11 @@ def process_internet_gateway(account, region, ec2):
             vpcs.append(VpcId['VpcId'])
         vpc_string = ",".join(vpcs)
 
-        dict = {'AccountId': account, 'InternetGatewayId': item['InternetGatewayId'], 'VpcIds': vpc_string, 'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'InternetGatewayId': item['InternetGatewayId'], 'VpcIds': vpc_string, 'Region': region}
         print(f'Account {account}: New Internet Gateway found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['VpcIds'] = vpc_string
         item['QueryType'] = 'igw'
@@ -183,10 +188,11 @@ def process_nat_gateway(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'NatGatewayId': item['NatGatewayId'], 'VpcId': item['VpcId'], 'SubnetId': item['SubnetId'],'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'NatGatewayId': item['NatGatewayId'], 'VpcId': item['VpcId'], 'SubnetId': item['SubnetId'], 'Region': region}
         print(f'Account {account}: New NAT Gateway found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['QueryType'] = 'natgw'
 
@@ -214,10 +220,11 @@ def process_load_balancer(account, region, elb):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'LoadBalancerArn': item['LoadBalancerArn'], 'DNSName': item['DNSName'], 'VpcId': item['VpcId'],'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'LoadBalancerArn': item['LoadBalancerArn'], 'DNSName': item['DNSName'], 'VpcId': item['VpcId'], 'Region': region}
         print(f'Account {account}: New Load Balancer found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['QueryType'] = 'elb'
 
@@ -245,10 +252,11 @@ def process_vpc_cidr(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
         print(f'Account {account}: New VPC CIDR found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['QueryType'] = 'cidr'
 
@@ -276,10 +284,11 @@ def process_vpc_subnets(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'SubnetId': item['SubnetId'], 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'SubnetId': item['SubnetId'], 'VpcId': item['VpcId'], 'CIDR': item['CidrBlock'], 'Region': region}
         print(f'Account {account}: New VPC subnet found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['QueryType'] = 'subnets'
 
@@ -307,10 +316,11 @@ def process_addresses(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'PublicIp': item['PublicIp'], 'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'PublicIp': item['PublicIp'], 'Region': region}
         print(f'Account {account}: New Elastic IP found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['QueryType'] = 'addresses'
 
@@ -338,10 +348,11 @@ def process_network_interfaces(account, region, ec2):
             list.append(item)
 
     for item in list:
-        dict = {'AccountId': account, 'NetworkInterfaceId': item['NetworkInterfaceId'], 'PrivateIpAddress': item['PrivateIpAddress'], 'Status': item['Status'], 'SubnetId': item['SubnetId'], 'Region': region}
+        dict = {'AccountId': account, 'AccountName': account_name[account], 'NetworkInterfaceId': item['NetworkInterfaceId'], 'PrivateIpAddress': item['PrivateIpAddress'], 'Status': item['Status'], 'SubnetId': item['SubnetId'], 'Region': region}
         print(f'Account {account}: New Network Interfaces found {dict}')
 
         item['AccountId'] = account
+        item['AccountName'] = account_name[account]
         item['Region'] = region
         item['QueryType'] = 'eni'
 
