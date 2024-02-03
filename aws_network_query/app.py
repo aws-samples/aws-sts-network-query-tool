@@ -350,7 +350,7 @@ def process_network_interfaces(account, region, ec2):
     return result
 
 
-def worker(account, session, args):
+def worker(account, session, args, region):
     """
     function to run inside threads, new session required for each thread. caught errors when only using 1 argument
     :param account:
@@ -371,7 +371,12 @@ def worker(account, session, args):
         if child_session != 'FAILED':
             print(f'Account {account}: AssumeRole success, querying VPC information')
             ec2 = child_session.client('ec2')
-            region_list = [region['RegionName'] for region in ec2.describe_regions()['Regions']]
+
+            if region is None:
+                region_list = [region['RegionName'] for region in ec2.describe_regions()['Regions']]
+            else:
+                region_list = [region]
+
             for region in region_list:
                 ec2 = child_session.client('ec2', region_name=region)
 
@@ -455,6 +460,7 @@ def write_csv(results, output_filename):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-region", "--region", default=False, help="Report only on the specified region. Default: all regions are reported on.")
     parser.add_argument("-r", "--cross-account-role-name", default="CrossAccountRoleForAWSNetworkQueryTool", help="Enter the CrossAccountRoleName that you used in the cross-account-member-role CloudFormation template. Default: CrossAccountRoleForAWSNetworkQueryTool")
     parser.add_argument("-o", "--output-filename", default="output", help="Choose a filename for the output. Default: output.csv")
     parser.add_argument("-i", "--accounts-csv", default=False, help="Choose a CSV containing AccountIds. Default: Account IDs will be pulled from AWS Organizations")
@@ -496,10 +502,17 @@ def main():
     else:
         accounts = list_accounts_from_file(args.accounts_csv)
 
+    if not args.region:
+        region = None
+    else:
+        region = args.region
+        if region is None:
+            sys.exit(1)
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
         for account in accounts:
-            futures.append(executor.submit(worker, account=account, session=None, args=args))
+            futures.append(executor.submit(worker, account=account, session=None, args=args, region=region))
         for future in concurrent.futures.as_completed(futures):
             future_result = future.result()
             threads_final_result.append(future_result[0])
